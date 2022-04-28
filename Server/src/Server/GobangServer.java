@@ -1,5 +1,7 @@
 package Server;
 
+import bean.DataPackage;
+
 import javax.swing.*;
 import java.io.*;
 import java.net.InetAddress;
@@ -12,7 +14,7 @@ import java.util.HashMap;
 public class GobangServer extends JFrame {
     private ServerSocket serverSocket;
     private final int port = 8888;
-    private HashMap<ObjectInputStream, ObjectOutputStream> clientMaps;
+    private HashMap<Socket, ObjectOutputStream> clientMaps = new HashMap<>();
     private HashMap<Integer, ArrayList<ObjectInputStream>> roomMap;
     private int roomNums = 0;
 
@@ -91,8 +93,11 @@ public class GobangServer extends JFrame {
     public void request(Socket socket, int clientNum) {
         try {
             // Create data input and output streams
-            DataInputStream inputFromClient = new DataInputStream(
+            ObjectInputStream inputFromClient = new ObjectInputStream(
                     socket.getInputStream());
+            ObjectOutputStream outputToClient = new ObjectOutputStream(
+                    socket.getOutputStream());
+            this.clientMaps.put(socket, outputToClient);
 
             // Continuously serve the client
             while (true) {
@@ -101,30 +106,27 @@ public class GobangServer extends JFrame {
                     ta.append("Client " + clientNum + " is closed" + "\n");
                     break;
                 }
-                String data = inputFromClient.readUTF();
-                String instruction = data.split("::")[0];
-                String body = data.split("::")[1];
+                DataPackage data = (DataPackage) inputFromClient.readObject();
+                String instruction = data.getInstruction();
+                String message = data.getMessage();
                 if (instruction.equals("message")) {
                     for (Socket s: socketList) {
-                        DataOutputStream outputToClient = new DataOutputStream(
-                                s.getOutputStream());
+                        ObjectOutputStream oos = this.clientMaps.get(s);
                         if (s == socket) {
-                            outputToClient.writeUTF("message::" + body);
+                            oos.writeObject(new DataPackage("message", message));
                         } else {
-                            outputToClient.writeUTF("message::" + clientNum + ": " + body);
+                            oos.writeObject(new DataPackage("message", clientNum + ": " + message));
                         }
-                        outputToClient.flush();
+                        oos.flush();
                     }
                 }
                 if (instruction.equals("close")) {
-                    DataOutputStream outputToClient = new DataOutputStream(
-                            socket.getOutputStream());
-                    outputToClient.writeUTF("close:: ");
+                    outputToClient.writeObject(new DataPackage("close", ""));
                     outputToClient.flush();
                     socket.close();
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
     }

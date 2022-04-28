@@ -1,4 +1,4 @@
-package Client.Constant;
+package Constants;
 
 public class Constants {
     public static final String HOST = "127.0.0.1";

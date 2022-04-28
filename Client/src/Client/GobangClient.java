@@ -1,6 +1,7 @@
 package Client;
 
-import Client.Constant.Constants;
+import Constants.Constants;
+import bean.DataPackage;
 
 import javax.swing.*;
 import java.awt.*;
@@ -19,6 +20,7 @@ public class GobangClient extends JFrame implements Runnable {
     private static int HEIGHT = 300;
 
     private Socket socket = null;
+    private ObjectOutputStream toServer;
     private JTextField textField = null;
     private JTextArea textArea = null;
 
@@ -61,16 +63,16 @@ public class GobangClient extends JFrame implements Runnable {
     public void run() {
         try {
             // Create data input and output streams
-            DataInputStream inputFromClient = new DataInputStream(
+            ObjectInputStream inputFromClient = new ObjectInputStream(
                     socket.getInputStream());
 
             // Continuously serve the client
             while (true) {
-                String data = inputFromClient.readUTF();
-                String instruction = data.split("::")[0];
-                String body = data.split("::")[1];
+                DataPackage data = (DataPackage) inputFromClient.readObject();
+                String instruction = data.getInstruction();
+                String message = data.getMessage();
                 if (instruction.equals("message")) {
-                    textArea.append(body + "\n");
+                    textArea.append(message + "\n");
                 }
                 if (instruction.equals("close")) {
                     this.socket.close();
@@ -79,10 +81,11 @@ public class GobangClient extends JFrame implements Runnable {
                 }
 
             }
-        }
-        catch(IOException ex) {
+        } catch(IOException ex) {
             ex.printStackTrace();
             System.out.println(this.socket.isClosed());
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
     }
 
@@ -98,6 +101,7 @@ public class GobangClient extends JFrame implements Runnable {
             try {
                 if (socket == null || socket.isClosed()) {
                     socket = new Socket(Constants.HOST, Constants.PORT);
+                    toServer = new ObjectOutputStream(socket.getOutputStream());
                     Thread t = new Thread(GobangClient.this);
                     t.start();
                     textArea.append("connected \n");
@@ -111,16 +115,13 @@ public class GobangClient extends JFrame implements Runnable {
     }
 
     class CloseConnectionListener implements ActionListener {
-        DataOutputStream toServer;
 
         @Override
         public void actionPerformed(ActionEvent e) {
             // TODO Auto-generated method stub
             try {
-                // Create an output stream to send data to the server
-                toServer = new DataOutputStream(socket.getOutputStream());
-                // Send the radius to the server
-                toServer.writeUTF("close::" + " ");
+                // Send the close info to the server
+                toServer.writeObject(new DataPackage("close", ""));
                 toServer.flush();
             } catch (IOException e1) {
                 // TODO Auto-generated catch block
@@ -131,19 +132,16 @@ public class GobangClient extends JFrame implements Runnable {
     }
 
     class TextFieldListener implements ActionListener {
-        DataOutputStream toServer;
 
         @Override
         public void actionPerformed(ActionEvent e) {
             try {
-                // Create an output stream to send data to the server
-                toServer = new DataOutputStream(socket.getOutputStream());
                 // Get the message from the text field
                 String message = textField.getText().trim();
                 textField.setText("");
 
                 // Send the radius to the server
-                toServer.writeUTF("message::" + message);
+                toServer.writeObject(new DataPackage("message", message));
                 toServer.flush();
             }
             catch (IOException ex) {
