@@ -19,27 +19,27 @@ public class GobangClient extends JFrame implements Runnable {
     private static int WIDTH = 400;
     private static int HEIGHT = 300;
 
+    private JPanel mainPage;
+
+    // join room page variables
+    private JPanel joinRoomPage;
+    private JTextField roomNumber;
+
     private Socket socket = null;
     private ObjectOutputStream toServer;
-    private JTextField textField = null;
-    private JTextArea textArea = null;
+    private JTextField textField;
+    private JTextArea textArea;
 
     public GobangClient() {
-        super("Chat Client");
+        super("Gobang Client");
         this.setSize(GobangClient.WIDTH, GobangClient.HEIGHT);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         createMenu();
 
-        textField = new JTextField();
-        textField.addActionListener(new TextFieldListener());
-
-        textArea = new JTextArea();
-        textArea.setEditable(false);
-        JScrollPane scroll = new JScrollPane(textArea);
-
-
-        this.add(textField, BorderLayout.SOUTH);
-        this.add(scroll, BorderLayout.CENTER);
+        createChatRoom();
+        //createMainPage();
+        //deleteMainPage();
+        //createJoinRoomPage();
         this.setVisible(true);
 
     }
@@ -58,6 +58,65 @@ public class GobangClient extends JFrame implements Runnable {
         menu.add(exitItem);
         menuBar.add(menu);
         this.setJMenuBar(menuBar);
+    }
+
+    private void createChatRoom() {
+        textField = new JTextField();
+        textField.addActionListener(new TextFieldListener());
+
+        textArea = new JTextArea();
+        textArea.setEditable(false);
+        JScrollPane scroll = new JScrollPane(textArea);
+
+
+        this.add(textField, BorderLayout.SOUTH);
+        this.add(scroll, BorderLayout.CENTER);
+    }
+
+    private void createMainPage() {
+        mainPage = new JPanel();
+        mainPage.setLayout(null);
+
+        JButton randMat = new JButton("Random Match");
+        randMat.setBounds(90, 50, 200, 50);
+        randMat.addActionListener(null); // todo
+        JButton joinRoom = new JButton("Join Room");
+        joinRoom.setBounds(90, 130, 200, 50);
+        joinRoom.addActionListener(null); // todo
+
+        mainPage.add(randMat);
+        mainPage.add(joinRoom);
+        this.add(mainPage);
+    }
+
+    private void deleteMainPage() {
+        this.remove(mainPage);
+    }
+
+    private void createJoinRoomPage() {
+        joinRoomPage = new JPanel();
+        joinRoomPage.setLayout(null);
+
+        JLabel rn = new JLabel("Room Number: ");
+        rn.setBounds(20, 30, 150, 30);
+
+        roomNumber = new JTextField();
+        roomNumber.setBounds(40, 70, 300, 30);
+
+        JButton clear = new JButton("clear");
+        JButton join = new JButton("join");
+        clear.setBounds(220, 130, 70, 30);
+        join.setBounds(300, 130, 60, 30);
+
+        joinRoomPage.add(rn);
+        joinRoomPage.add(roomNumber);
+        joinRoomPage.add(clear);
+        joinRoomPage.add(join);
+        this.add(joinRoomPage);
+    }
+
+    private void deleteJoinRoomPage() {
+        this.remove(joinRoomPage);
     }
 
     public void run() {
@@ -90,7 +149,7 @@ public class GobangClient extends JFrame implements Runnable {
     }
 
     public static void main(String[] args) {
-        GobangClient gobangClient = new GobangClient();
+        new GobangClient();
     }
 
     class OpenConnectionListener implements ActionListener {
