@@ -1,6 +1,7 @@
 package Server;
 
 import bean.DataPackage;
+import bean.Room;
 
 import javax.swing.*;
 import java.io.*;
@@ -10,13 +11,15 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Random;
 
 public class GobangServer extends JFrame {
     private ServerSocket serverSocket;
     private final int port = 8888;
+    private Random r = new Random();
     private HashMap<Socket, ObjectOutputStream> clientMaps = new HashMap<>();
-    private HashMap<Integer, ArrayList<ObjectInputStream>> roomMap;
-    private int roomNums = 0;
+    private HashMap<Integer, Room> roomMap = new HashMap<>();
+    private ArrayList<Integer> emptyRoom = new ArrayList<>();
 
     private static int WIDTH = 400;
     private static int HEIGHT = 300;
@@ -77,12 +80,7 @@ public class GobangServer extends JFrame {
                             + inetAddress.getHostAddress() + "\n");
 
                     // todo
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            request(socket, clientNum);
-                        }
-                    }).start();
+                    new Thread(() -> request(socket, clientNum)).start();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -124,6 +122,51 @@ public class GobangServer extends JFrame {
                     outputToClient.writeObject(new DataPackage("close", ""));
                     outputToClient.flush();
                     socket.close();
+                }
+                if (instruction.equals("join")) {
+                    int roomNumber = Integer.parseInt(message);
+                    Room room = roomMap.get(roomNumber);
+                    if (room == null) {
+                        room = new Room(roomNumber);
+                        room.setUser1(socket);
+                        emptyRoom.add(roomNumber);
+                        outputToClient.writeObject(new DataPackage("joinSuccess", ""));
+                        outputToClient.flush();
+                    } else {
+                        if (room.getUser2() != null) {
+                            outputToClient.writeObject(new DataPackage("joinFail", "Room is full!"));
+                            outputToClient.flush();
+                        } else {
+                            room.setUser2(socket);
+                            outputToClient.writeObject(new DataPackage("startGame", ""));
+                            outputToClient.flush();
+                            ObjectOutputStream oos = this.clientMaps.get(room.getUser1());
+                            oos.writeObject(new DataPackage("startGame", ""));
+                            oos.flush();
+                        }
+                    }
+                }
+                if (instruction.equals("randomMatch")) {
+                    if (emptyRoom.size() != 0) {
+                        Room room = roomMap.get(emptyRoom.get(0));
+                        emptyRoom.remove(0);
+                        room.setUser2(socket);
+                        outputToClient.writeObject(new DataPackage("startGame", ""));
+                        outputToClient.flush();
+                        ObjectOutputStream oos = this.clientMaps.get(room.getUser1());
+                        oos.writeObject(new DataPackage("startGame", ""));
+                        oos.flush();
+                    } else {
+                        int roomNumber = r.nextInt(100) +100;
+                        while (roomMap.get(roomNumber) != null) {
+                            roomNumber = r.nextInt(100) +100;
+                        }
+                        Room room = new Room(roomNumber);
+                        room.setUser1(socket);
+                        emptyRoom.add(roomNumber);
+                        outputToClient.writeObject(new DataPackage("joinSuccess", ""));
+                        outputToClient.flush();
+                    }
                 }
             }
         } catch (IOException | ClassNotFoundException e) {

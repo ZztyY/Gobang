@@ -25,6 +25,10 @@ public class GobangClient extends JFrame implements Runnable {
     private JPanel joinRoomPage;
     private JTextField roomNumber;
 
+    // chessboard page variables
+    private JPanel chessboardPage;
+    private int roomNum;
+
     private Socket socket = null;
     private ObjectOutputStream toServer;
     private JTextField textField;
@@ -36,8 +40,8 @@ public class GobangClient extends JFrame implements Runnable {
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         createMenu();
 
-        createChatRoom();
-        //createMainPage();
+        //createChatRoom();
+        createMainPage();
         //deleteMainPage();
         //createJoinRoomPage();
         this.setVisible(true);
@@ -79,10 +83,10 @@ public class GobangClient extends JFrame implements Runnable {
 
         JButton randMat = new JButton("Random Match");
         randMat.setBounds(90, 50, 200, 50);
-        randMat.addActionListener(null); // todo
+        randMat.addActionListener(null);  // todo
         JButton joinRoom = new JButton("Join Room");
         joinRoom.setBounds(90, 130, 200, 50);
-        joinRoom.addActionListener(null); // todo
+        joinRoom.addActionListener(new JoinRoomButtonListener());
 
         mainPage.add(randMat);
         mainPage.add(joinRoom);
@@ -104,18 +108,36 @@ public class GobangClient extends JFrame implements Runnable {
         roomNumber.setBounds(40, 70, 300, 30);
 
         JButton clear = new JButton("clear");
+        clear.addActionListener(new ClearButtonListener());
         JButton join = new JButton("join");
+        join.addActionListener(new JoinButtonListener());
         clear.setBounds(220, 130, 70, 30);
         join.setBounds(300, 130, 60, 30);
+
+        JButton back = new JButton("back");
+        back.addActionListener(new BackButtonListener());
+        back.setBounds(260, 180, 70, 30);
 
         joinRoomPage.add(rn);
         joinRoomPage.add(roomNumber);
         joinRoomPage.add(clear);
         joinRoomPage.add(join);
+        joinRoomPage.add(back);
         this.add(joinRoomPage);
     }
 
     private void deleteJoinRoomPage() {
+        this.remove(joinRoomPage);
+    }
+
+    // todo chessboard
+    private void createChessboardPage() {
+        chessboardPage = new JPanel();
+
+        this.add(chessboardPage);
+    }
+
+    private void deleteChessboardPage() {
         this.remove(joinRoomPage);
     }
 
@@ -138,6 +160,10 @@ public class GobangClient extends JFrame implements Runnable {
                     textArea.append("disconnected \n");
                     break;
                 }
+                if (instruction.equals("join")) {
+                    deleteJoinRoomPage();
+                    // todo create chessboard
+                }
 
             }
         } catch(IOException ex) {
@@ -152,11 +178,55 @@ public class GobangClient extends JFrame implements Runnable {
         new GobangClient();
     }
 
+    class JoinRoomButtonListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            deleteMainPage();
+            createJoinRoomPage();
+            repaint();
+            validate();
+        }
+    }
+
+    class BackButtonListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            deleteJoinRoomPage();
+            createMainPage();
+            repaint();
+            validate();
+        }
+    }
+
+    class ClearButtonListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            roomNumber.setText("");
+        }
+    }
+
+    class JoinButtonListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            try {
+                // Get the message from the text field
+                String message = roomNumber.getText().trim();
+                roomNumber.setText("");
+
+                // Send the radius to the server
+                toServer.writeObject(new DataPackage("join", message));
+                toServer.flush();
+            }
+            catch (IOException ex) {
+                System.err.println(ex);
+            }
+        }
+    }
+
     class OpenConnectionListener implements ActionListener {
 
         @Override
         public void actionPerformed(ActionEvent e) {
-            // TODO Auto-generated method stub
             try {
                 if (socket == null || socket.isClosed()) {
                     socket = new Socket(Constants.HOST, Constants.PORT);
@@ -166,7 +236,6 @@ public class GobangClient extends JFrame implements Runnable {
                     textArea.append("connected \n");
                 }
             } catch (IOException e1) {
-                // TODO Auto-generated catch block
                 e1.printStackTrace();
                 textArea.append("connection Failure");
             }
@@ -177,13 +246,11 @@ public class GobangClient extends JFrame implements Runnable {
 
         @Override
         public void actionPerformed(ActionEvent e) {
-            // TODO Auto-generated method stub
             try {
                 // Send the close info to the server
                 toServer.writeObject(new DataPackage("close", ""));
                 toServer.flush();
             } catch (IOException e1) {
-                // TODO Auto-generated catch block
                 e1.printStackTrace();
                 textArea.append("connection Failure");
             }
