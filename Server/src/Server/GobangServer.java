@@ -1,5 +1,6 @@
 package Server;
 
+import bean.ChessData;
 import bean.DataPackage;
 import bean.Room;
 
@@ -16,19 +17,19 @@ import java.util.Random;
 public class GobangServer extends JFrame {
     private ServerSocket serverSocket;
     private final int port = 8888;
-    private Random r = new Random();
-    private HashMap<Socket, ObjectOutputStream> clientMaps = new HashMap<>();
-    private HashMap<Integer, Room> roomMap = new HashMap<>();
-    private ArrayList<Integer> emptyRoom = new ArrayList<>();
+    private final Random r = new Random();
+    private final HashMap<Socket, ObjectOutputStream> clientMaps = new HashMap<>();
+    private final HashMap<Integer, Room> roomMap = new HashMap<>();
+    private final ArrayList<Integer> emptyRoom = new ArrayList<>();
 
-    private static int WIDTH = 400;
-    private static int HEIGHT = 300;
+    private static final int WIDTH = 400;
+    private static final int HEIGHT = 300;
 
     // Text area for displaying contents
-    private JTextArea ta;
+    private final JTextArea ta;
 
     private int clientNum = 0;
-    private ArrayList<Socket> socketList = new ArrayList<>();
+    private final ArrayList<Socket> socketList = new ArrayList<>();
 
     public GobangServer() {
         super("GoBang Server");
@@ -126,22 +127,26 @@ public class GobangServer extends JFrame {
                 if (instruction.equals("join")) {
                     int roomNumber = Integer.parseInt(message);
                     Room room = roomMap.get(roomNumber);
+                    System.out.println(room);
                     if (room == null) {
                         room = new Room(roomNumber);
+                        roomMap.put(roomNumber, room);
                         room.setUser1(socket);
                         emptyRoom.add(roomNumber);
-                        outputToClient.writeObject(new DataPackage("joinSuccess", ""));
+                        outputToClient.writeObject(new DataPackage("joinSuccess", Integer.toString(roomNumber)));
                         outputToClient.flush();
                     } else {
                         if (room.getUser2() != null) {
-                            outputToClient.writeObject(new DataPackage("joinFail", "Room is full!"));
+                            outputToClient.writeObject(new DataPackage("joinFail", "Room is full !"));
                             outputToClient.flush();
                         } else {
                             room.setUser2(socket);
                             outputToClient.writeObject(new DataPackage("startGame", ""));
                             outputToClient.flush();
+
+
                             ObjectOutputStream oos = this.clientMaps.get(room.getUser1());
-                            oos.writeObject(new DataPackage("startGame", ""));
+                            oos.writeObject(new DataPackage("startGame", Integer.toString(roomNumber)));
                             oos.flush();
                         }
                     }
@@ -151,10 +156,10 @@ public class GobangServer extends JFrame {
                         Room room = roomMap.get(emptyRoom.get(0));
                         emptyRoom.remove(0);
                         room.setUser2(socket);
-                        outputToClient.writeObject(new DataPackage("startGame", ""));
+                        outputToClient.writeObject(new DataPackage("startGame", Integer.toString(room.getRoomNumber())));
                         outputToClient.flush();
                         ObjectOutputStream oos = this.clientMaps.get(room.getUser1());
-                        oos.writeObject(new DataPackage("startGame", ""));
+                        oos.writeObject(new DataPackage("startGame", Integer.toString(room.getRoomNumber())));
                         oos.flush();
                     } else {
                         int roomNumber = r.nextInt(100) +100;
@@ -162,11 +167,27 @@ public class GobangServer extends JFrame {
                             roomNumber = r.nextInt(100) +100;
                         }
                         Room room = new Room(roomNumber);
+                        roomMap.put(roomNumber, room);
                         room.setUser1(socket);
                         emptyRoom.add(roomNumber);
-                        outputToClient.writeObject(new DataPackage("joinSuccess", ""));
+                        outputToClient.writeObject(new DataPackage("joinSuccess", Integer.toString(roomNumber)));
                         outputToClient.flush();
                     }
+                }
+                if (instruction.equals("down")) {
+                    ChessData chessData = (ChessData) inputFromClient.readObject();
+                    Room room = roomMap.get(chessData.getRoomNumber());
+                    ObjectOutputStream oos;
+                    if (chessData.isOffense()) {
+                        // get rival, offense is player1 then the rival is player2
+                        oos = clientMaps.get(room.getUser2());
+                    } else {
+                        oos = clientMaps.get(room.getUser1());
+                    }
+                    oos.writeObject(new DataPackage("down", ""));
+                    oos.flush();
+                    oos.writeObject(chessData);
+                    oos.flush();
                 }
             }
         } catch (IOException | ClassNotFoundException e) {

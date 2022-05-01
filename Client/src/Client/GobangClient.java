@@ -1,12 +1,16 @@
 package Client;
 
 import Constants.Constants;
+import bean.ChessData;
 import bean.DataPackage;
+import bean.Game;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.*;
 import java.net.Socket;
 
@@ -26,8 +30,10 @@ public class GobangClient extends JFrame implements Runnable {
     private JTextField roomNumber;
 
     // chessboard page variables
-    private JPanel chessboardPage;
+    private ChessboardPanel chessboardPage;
     private int roomNum;
+    private boolean flag = false;
+    private boolean offense = false;
 
     private Socket socket = null;
     private ObjectOutputStream toServer;
@@ -42,8 +48,6 @@ public class GobangClient extends JFrame implements Runnable {
 
         //createChatRoom();
         createMainPage();
-        //deleteMainPage();
-        //createJoinRoomPage();
         this.setVisible(true);
 
     }
@@ -83,7 +87,7 @@ public class GobangClient extends JFrame implements Runnable {
 
         JButton randMat = new JButton("Random Match");
         randMat.setBounds(90, 50, 200, 50);
-        randMat.addActionListener(null);  // todo
+        randMat.addActionListener(new RandMatButtonListener());
         JButton joinRoom = new JButton("Join Room");
         joinRoom.setBounds(90, 130, 200, 50);
         joinRoom.addActionListener(new JoinRoomButtonListener());
@@ -132,13 +136,14 @@ public class GobangClient extends JFrame implements Runnable {
 
     // todo chessboard
     private void createChessboardPage() {
-        chessboardPage = new JPanel();
+        this.setSize(1000, 1000);
+        chessboardPage = new ChessboardPanel();
 
         this.add(chessboardPage);
     }
 
     private void deleteChessboardPage() {
-        this.remove(joinRoomPage);
+        this.remove(chessboardPage);
     }
 
     public void run() {
@@ -160,11 +165,37 @@ public class GobangClient extends JFrame implements Runnable {
                     textArea.append("disconnected \n");
                     break;
                 }
-                if (instruction.equals("join")) {
-                    deleteJoinRoomPage();
-                    // todo create chessboard
+                if (instruction.equals("joinSuccess")) {
+                    offense = true;
+                    roomNum = Integer.parseInt(message);
+                    System.out.println(instruction+ " " +roomNum);
+                    JOptionPane.showMessageDialog(joinRoomPage, "Join room success, waiting for game begin !");
                 }
-
+                if (instruction.equals("startGame")) {
+                    if (offense) {
+                        flag = true;
+                    }
+                    roomNum = Integer.parseInt(message);
+                    System.out.println(instruction+ " " +roomNum);
+                    if (joinRoomPage != null) {
+                        deleteJoinRoomPage();
+                    }
+                    if (mainPage != null) {
+                        deleteMainPage();
+                    }
+                    createChessboardPage();
+                    repaint();
+                    validate();
+                }
+                if (instruction.equals("joinFail")) {
+                    JOptionPane.showMessageDialog(joinRoomPage, message, message,JOptionPane.WARNING_MESSAGE);
+                }
+                if (instruction.equals("down")) {
+                    ChessData chessData = (ChessData) inputFromClient.readObject();
+                    int[] chess = chessData.getChess();
+                    chessboardPage.makeChess(chess[0], chess[1]);
+                    flag = true;
+                }
             }
         } catch(IOException ex) {
             ex.printStackTrace();
@@ -176,6 +207,18 @@ public class GobangClient extends JFrame implements Runnable {
 
     public static void main(String[] args) {
         new GobangClient();
+    }
+
+    class RandMatButtonListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            try {
+                toServer.writeObject(new DataPackage("randomMatch", ""));
+                toServer.flush();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
     }
 
     class JoinRoomButtonListener implements ActionListener {
@@ -218,7 +261,7 @@ public class GobangClient extends JFrame implements Runnable {
                 toServer.flush();
             }
             catch (IOException ex) {
-                System.err.println(ex);
+                ex.printStackTrace();
             }
         }
     }
@@ -271,8 +314,102 @@ public class GobangClient extends JFrame implements Runnable {
                 toServer.flush();
             }
             catch (IOException ex) {
-                System.err.println(ex);
+                ex.printStackTrace();
             }
+        }
+    }
+
+    class ChessboardPanel extends JPanel implements MouseListener {
+        public int x;
+        public int y;
+        public int chessX;
+        public int chessY;
+        public Game game = new Game();
+        public JLabel roomLabel = new JLabel("room:" + roomNum);
+
+        public ChessboardPanel() {
+            super();
+            setLayout(null);
+            addMouseListener(this);
+            roomLabel.setBounds(0, 150, 100, 50);
+            add(roomLabel);
+        }
+
+        public void paint(Graphics g) {
+            super.paint(g);
+            game.Paint(g);
+        }
+
+        @Override
+        public void mouseClicked(MouseEvent e) {
+
+        }
+
+        @Override
+        public void mousePressed(MouseEvent e) {
+            x = e.getX();
+            y = e.getY();
+            if (x>=100 && x<=900  && y>=100 && y<=900) {
+                chessX = (x - 100) / 50;
+                chessY = (y - 100) / 50;
+                if (flag){
+                    makeChess(chessX,chessY);
+                    int[] chess = new int[]{chessX,chessY};
+                    try {
+                        toServer.writeObject(new DataPackage("down", ""));
+                        toServer.flush();
+                        toServer.writeObject(new ChessData(roomNum, chess, offense));
+                        toServer.flush();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                    flag = false;
+                }
+            }
+        }
+
+        @Override
+        public void mouseReleased(MouseEvent e) {
+
+        }
+
+        @Override
+        public void mouseEntered(MouseEvent e) {
+
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e) {
+
+        }
+
+        public void makeChess(int x, int y) {
+            int[] B = game.Judge(x, y);
+            repaint();
+            int b = game.P();
+            if (b == 1)
+            {
+                JOptionPane.showMessageDialog(this,"游戏结束,黑棋获胜");
+                game.Clean();
+                game.Rush();
+                flag = false;
+            }
+            else if (b == 2)
+            {
+                JOptionPane.showMessageDialog(this,"游戏结束,白棋获胜");
+                game.Clean();
+                game.Rush();
+                flag = false;
+            }
+            Boolean Pe = game.Peace();
+            if (Pe)
+            {
+                JOptionPane.showMessageDialog(this,"游戏结束,双方和棋");
+                game.Clean();
+                game.Rush();
+                flag = false;
+            }
+            repaint();
         }
     }
 }
