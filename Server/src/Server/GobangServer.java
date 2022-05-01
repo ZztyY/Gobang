@@ -32,7 +32,7 @@ public class GobangServer extends JFrame {
     private final ArrayList<Socket> socketList = new ArrayList<>();
 
     public GobangServer() {
-        super("GoBang Server");
+        super("Gobang Server");
         this.setSize(GobangServer.WIDTH, GobangServer.HEIGHT);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -61,7 +61,7 @@ public class GobangServer extends JFrame {
         new Thread(() -> {
             try {
                 serverSocket = new ServerSocket(port);
-                this.ta.append("Chat server started at " + new Date() + "\n");
+                this.ta.append("Gobang server started at " + new Date() + "\n");
                 while (true) {
                     // Listen for a new connection request
                     Socket socket = serverSocket.accept();
