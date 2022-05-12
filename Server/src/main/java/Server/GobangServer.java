@@ -3,12 +3,18 @@ package Server;
 import bean.ChessData;
 import bean.DataPackage;
 import bean.Room;
+import bean.User;
+import models.DBUtil;
 
 import javax.swing.*;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -189,8 +195,53 @@ public class GobangServer extends JFrame {
                     oos.writeObject(chessData);
                     oos.flush();
                 }
+                if (instruction.equals("rank")) {
+                    Connection conn = DBUtil.getConn();
+                    String rank = "";
+                    String sql = "select * from user order by wins desc";
+                    PreparedStatement preSt = conn.prepareStatement(sql);
+                    ResultSet res = preSt.executeQuery();
+                    while (res.next()) {
+                        rank += "Username: " + res.getString("username") +
+                                " Wins: " + res.getInt("wins") + "\n";
+                    }
+                    outputToClient.writeObject(new DataPackage("rank", rank));
+                    outputToClient.flush();
+                }
+                if (instruction.equals("signup")) {
+                    User user = (User) inputFromClient.readObject();
+                    try {
+                        if (models.User.findUserByName(user.getUsername()) == null) {
+                            models.User.createUser(user.getUsername(), user.getPassword());
+                            outputToClient.writeObject(new DataPackage("signup", "Signup success !"));
+                            outputToClient.flush();
+                        } else {
+                            outputToClient.writeObject(new DataPackage("signup", "Signup fail, try another username !"));
+                            outputToClient.flush();
+                        }
+                    } catch (SQLException e) {
+                        outputToClient.writeObject(new DataPackage("signup", "Signup fail, try another username !"));
+                        outputToClient.flush();
+                    }
+
+                }
+                if (instruction.equals("login")) {
+                    User user = (User) inputFromClient.readObject();
+                    try {
+                        models.User u = models.User.findUser(user.getUsername(), user.getPassword());
+                        outputToClient.writeObject(new DataPackage("login", "success"));
+                        outputToClient.flush();
+                        user.setId(u.getId());
+                        user.setWins(u.getWins());
+                        outputToClient.writeObject(user);
+                        outputToClient.flush();
+                    } catch (SQLException e) {
+                        outputToClient.writeObject(new DataPackage("login", "fail"));
+                        outputToClient.flush();
+                    }
+                }
             }
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException | ClassNotFoundException | SQLException e) {
             e.printStackTrace();
         }
     }

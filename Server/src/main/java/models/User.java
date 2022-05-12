@@ -80,6 +80,24 @@ public class User {
         return user;
     }
 
+    public static User findUserByName(String username) throws SQLException {
+        User user = new User();
+        Connection conn = DBUtil.getConn();
+        String sql = "select * from user " + "where username=?";
+        PreparedStatement preSt = conn.prepareStatement(sql);
+        preSt.setString(1, username);
+        ResultSet res = preSt.executeQuery();
+        if (res.next()) {
+            user.setId(res.getInt("id"));
+            user.setUsername(res.getString("username"));
+            user.setPassword(res.getString("password"));
+            user.setWins(res.getInt("wins"));
+        } else {
+            user = null;
+        }
+        return user;
+    }
+
     public static void updateUser(User user) throws SQLException {
         Connection conn = DBUtil.getConn();
         String sql = "update user set username=?,password=?,wins=? where id=?";
@@ -92,6 +110,7 @@ public class User {
     }
 
     public static void main(String[] args) throws SQLException {
+
     }
 }
 
