@@ -152,4 +152,8 @@ public class Game implements Serializable {
         Write = 0;
         Black = 0;
     }
+
+    public boolean getJudge() {
+        return this.Judge;
+    }
 }

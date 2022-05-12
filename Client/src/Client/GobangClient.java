@@ -49,6 +49,7 @@ public class GobangClient extends JFrame implements Runnable {
     private JTextArea textArea;
     private JMenu menu2;
     private User self;
+    private int win = 0;
 
     public GobangClient() {
         super("Gobang Client");
@@ -289,6 +290,7 @@ public class GobangClient extends JFrame implements Runnable {
                     ChessData chessData = (ChessData) inputFromClient.readObject();
                     int[] chess = chessData.getChess();
                     chessboardPage.makeChess(chess[0], chess[1]);
+                    win = 0;
                     flag = true;
                 }
                 if (instruction.equals("rank")) {
@@ -567,6 +569,14 @@ public class GobangClient extends JFrame implements Runnable {
                 chessY = (y - 100) / 50;
                 if (flag){
                     makeChess(chessX,chessY);
+                    if (win == 1 && self!=null) {
+                        try {
+                            toServer.writeObject(new DataPackage("update", self.getUsername()));
+                            toServer.flush();
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
+                    }
                     int[] chess = new int[]{chessX,chessY};
                     try {
                         toServer.writeObject(new DataPackage("down", ""));
@@ -602,6 +612,7 @@ public class GobangClient extends JFrame implements Runnable {
             int b = game.P();
             if (b == 1)
             {
+                win = 1;
                 JOptionPane.showMessageDialog(this,"game over, black wins");
                 game.Clean();
                 game.Rush();
@@ -609,6 +620,7 @@ public class GobangClient extends JFrame implements Runnable {
             }
             else if (b == 2)
             {
+                win = 1;
                 JOptionPane.showMessageDialog(this,"game over, white wins");
                 game.Clean();
                 game.Rush();

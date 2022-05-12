@@ -240,6 +240,11 @@ public class GobangServer extends JFrame {
                         outputToClient.flush();
                     }
                 }
+                if (instruction.equals("update")) {
+                    models.User u = models.User.findUserByName(message);
+                    u.setWins(u.getWins()+1);
+                    models.User.updateUser(u);
+                }
             }
         } catch (IOException | ClassNotFoundException | SQLException e) {
             e.printStackTrace();
