@@ -134,7 +134,6 @@ public class GobangClient extends JFrame implements Runnable {
         this.remove(joinRoomPage);
     }
 
-    // todo chessboard
     private void createChessboardPage() {
         this.setSize(1000, 1000);
         chessboardPage = new ChessboardPanel();
@@ -389,14 +388,14 @@ public class GobangClient extends JFrame implements Runnable {
             int b = game.P();
             if (b == 1)
             {
-                JOptionPane.showMessageDialog(this,"游戏结束,黑棋获胜");
+                JOptionPane.showMessageDialog(this,"game over, black wins");
                 game.Clean();
                 game.Rush();
                 flag = false;
             }
             else if (b == 2)
             {
-                JOptionPane.showMessageDialog(this,"游戏结束,白棋获胜");
+                JOptionPane.showMessageDialog(this,"game over, white wins");
                 game.Clean();
                 game.Rush();
                 flag = false;
@@ -404,7 +403,7 @@ public class GobangClient extends JFrame implements Runnable {
             Boolean Pe = game.Peace();
             if (Pe)
             {
-                JOptionPane.showMessageDialog(this,"游戏结束,双方和棋");
+                JOptionPane.showMessageDialog(this,"game over, draw");
                 game.Clean();
                 game.Rush();
                 flag = false;

@@ -6,7 +6,7 @@ import java.io.Serializable;
 public class Game implements Serializable {
     Chess chess = new Chess();
     Map map = new Map();
-    Boolean Judge = false;//颜色变化
+    Boolean Judge = false; // white or black
     int Write = 0;
     int Black = 0;
     public void Paint(Graphics g)
